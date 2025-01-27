@@ -1,6 +1,5 @@
 import logging
 
-import camelot
 import duckdb
 import pandas as pd
 import pyarrow as pa
@@ -67,6 +66,8 @@ def fill_na_days(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_historical_sq_month() -> pd.DataFrame:
+    import camelot
+
     tables = camelot.read_pdf(
         "https://www.jpx.co.jp/markets/derivatives/special-quotation/mklp7700000028jz-att/sq_his.pdf",
         pages="all",
@@ -95,6 +96,8 @@ def get_historical_sq_month() -> pd.DataFrame:
 
 
 def get_historical_sq_week() -> pd.DataFrame:
+    import camelot
+
     tables = camelot.read_pdf(
         "https://www.jpx.co.jp/markets/derivatives/special-quotation/mklp7700000028jz-att/sq_his(mini,weekly).pdf",
         pages="all",
