@@ -241,6 +241,7 @@ def update_data() -> int:
         logger.error(
             "Webサイトの構成が変更されている可能性があります, https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html"
         )
+        return 1
 
     sq_date_n225 = tree.xpath('//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[2]')[
         0
