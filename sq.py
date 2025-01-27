@@ -1,5 +1,7 @@
 import camelot
 import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
 from dateutil.relativedelta import relativedelta
 
 from config import data_dir
@@ -188,20 +190,20 @@ def get_historical_data() -> pd.DataFrame:
 
 
 def store_historical_data() -> None:
-    df = (
-        fill_na_days(get_historical_data())
-        .reset_index(drop=False)
-        .loc[
-            :,
-            [
-                "ContractMonth",
-                "SpecialQuotationDay",
-                "LastTradingDay",
-                "FinalSettlementPrices",
-            ],
-        ]
+    df = fill_na_days(get_historical_data()).reset_index(drop=False)
+    table = pa.table(
+        {
+            "ContractMonth": pa.array(df.loc[:, "ContractMonth"], type=pa.string()),
+            "SpecialQuotationDay": pa.array(
+                df.loc[:, "SpecialQuotationDay"], type=pa.date32()
+            ),
+            "LastTradingDay": pa.array(df.loc[:, "LastTradingDay"], type=pa.date32()),
+            "FinalSettlementPrices": pa.array(
+                df.loc[:, "FinalSettlementPrices"], type=pa.float32()
+            ),
+        }
     )
-    df.to_parquet(data_dir / "special_quotation.parquet")
+    pq.write_table(table, data_dir / "special_quotation.parquet")
 
 
 def update_data() -> None:
