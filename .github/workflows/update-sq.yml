@@ -13,4 +13,14 @@ jobs:
       - name: Install the project
         run: uv sync --all-extras --dev
       - name: Run Script
+        id: update_script
         run: uv run python sq.py
+      - name: Commit and Push
+        run: |
+          if [ "${{ steps.update_script.outcome }}" = "success" ]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "update data"
+            git push
+          fi

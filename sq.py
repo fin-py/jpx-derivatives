@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import duckdb
 import pandas as pd
@@ -216,7 +217,7 @@ def store_historical_data() -> None:
     pq.write_table(table, data_dir / "special_quotation.parquet")
 
 
-def update_data() -> None:
+def update_data() -> int:
     """
     SQ値を更新する
     https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html
@@ -271,7 +272,7 @@ def update_data() -> None:
     # データが更新されていなければ終了
     if all((is_n225_value_exist, is_n225_mini_value_exist)):
         logger.info("データは最新です, 処理を終了します")
-        return None
+        return 3
 
     con = duckdb.connect(database=":memory:")
     con.execute(f"CREATE TABLE special_quotation AS SELECT * FROM '{file_path}'")
@@ -289,8 +290,10 @@ def update_data() -> None:
         )
     logger.info(f"{file_path} に書き込みます")
     con.sql(f"COPY (SELECT * FROM special_quotation) TO '{file_path}'")
+    return 0
 
 
 if __name__ == "__main__":
     # store_historical_data()
-    update_data()
+    code = update_data()
+    sys.exit(code)
