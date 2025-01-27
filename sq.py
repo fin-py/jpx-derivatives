@@ -273,7 +273,7 @@ def update_data() -> int:
     # データが更新されていなければ終了
     if all((is_n225_value_exist, is_n225_mini_value_exist)):
         logger.info("データは最新です, 処理を終了します")
-        return 3
+        return 0
 
     con = duckdb.connect(database=":memory:")
     con.execute(f"CREATE TABLE special_quotation AS SELECT * FROM '{file_path}'")
