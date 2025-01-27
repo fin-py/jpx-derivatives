@@ -1,11 +1,18 @@
+import logging
+
 import camelot
+import duckdb
 import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
+import requests
 from dateutil.relativedelta import relativedelta
+from lxml import html
 
-from config import data_dir
+from config import data_dir, setup_logging
 
+logger_name = setup_logging(__file__)
+logger = logging.getLogger(logger_name)
 holidays = pd.read_parquet(data_dir / "holidays.parquet").loc[:, "Date"].to_list()
 
 
@@ -211,9 +218,76 @@ def update_data() -> None:
     SQ値を更新する
     https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html
     """
-    pass
+    file_path = str(data_dir / "special_quotation.parquet")
+    res = requests.get(
+        "https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html"
+    )
+    tree = html.fromstring(res.content)
+    product_category_1 = tree.xpath(
+        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[1]'
+    )[0].text_content()
+    product_category_2 = tree.xpath(
+        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[1]'
+    )[0].text_content()
+
+    try:
+        assert product_category_1.startswith("日経225")
+        assert product_category_2.startswith("日経225ミニオプション")
+    except AssertionError:
+        logger.error(
+            "Webサイトの構成が変更されている可能性があります, https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html"
+        )
+
+    sq_date_n225 = tree.xpath('//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[2]')[
+        0
+    ].text_content()
+    sq_date_n225_mini = tree.xpath(
+        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[2]'
+    )[0].text_content()
+    sq_n225_raw = tree.xpath('//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[3]')[
+        0
+    ].text_content()
+    sq_n225_mini_raw = tree.xpath(
+        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[3]'
+    )[0].text_content()
+    sq_n225 = float(sq_n225_raw.replace(",", ""))
+    sq_n225_mini = float(sq_n225_mini_raw.replace(",", ""))
+
+    logger.info(f"日経225 SQ日: {sq_date_n225}, SQ値 {sq_n225}")
+    logger.info(f"日経225ミニオプション SQ日: {sq_date_n225_mini}, SQ値 {sq_n225_mini}")
+
+    r_n225 = duckdb.sql(
+        f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225}'"
+    )
+    is_n225_value_exist = bool(r_n225.fetchone())
+    r_n225_mini = duckdb.sql(
+        f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
+    )
+    is_n225_mini_value_exist = bool(r_n225_mini.fetchone())
+
+    # データが更新されていなければ終了
+    if all((is_n225_value_exist, is_n225_mini_value_exist)):
+        logger.info("データは最新です, 処理を終了します")
+        return None
+
+    con = duckdb.connect(database=":memory:")
+    con.execute(f"CREATE TABLE special_quotation AS SELECT * FROM '{file_path}'")
+    if not is_n225_value_exist:
+        logger.info(f"日経225のSQ値を更新します, SQ日: {sq_date_n225} SQ値: {sq_n225}")
+        con.execute(
+            f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225} WHERE SpecialQuotationDay = '{sq_date_n225}'"
+        )
+    if not is_n225_mini_value_exist:
+        logger.info(
+            f"日経225ミニオプションのSQ値を更新します, SQ日: {sq_date_n225_mini} SQ値: {sq_n225_mini}"
+        )
+        con.execute(
+            f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225_mini} WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
+        )
+    logger.info(f"{file_path} に書き込みます")
+    con.sql(f"COPY (SELECT * FROM special_quotation) TO '{file_path}'")
 
 
 if __name__ == "__main__":
-    store_historical_data()
-    # update_data()
+    # store_historical_data()
+    update_data()
