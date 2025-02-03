@@ -217,12 +217,11 @@ def store_historical_data() -> None:
     pq.write_table(table, data_dir / "special_quotation.parquet")
 
 
-def update_data() -> int:
+def get_sq_data() -> tuple[int] | int:
     """
-    SQ値を更新する
+    SQ値を取得する
     https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html
     """
-    file_path = str(data_dir / "special_quotation.parquet")
     res = requests.get(
         "https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html"
     )
@@ -257,18 +256,28 @@ def update_data() -> int:
     )[0].text_content()
     sq_n225 = float(sq_n225_raw.replace(",", ""))
     sq_n225_mini = float(sq_n225_mini_raw.replace(",", ""))
+    return sq_date_n225, sq_n225, sq_date_n225_mini, sq_n225_mini
+
+
+def update_data() -> int:
+    """
+    SQ値を更新する
+    https://www.jpx.co.jp/markets/derivatives/special-quotation/index.html
+    """
+    file_path = str(data_dir / "special_quotation.parquet")
+    sq_date_n225, sq_n225, sq_date_n225_mini, sq_n225_mini = get_sq_data()
 
     logger.info(f"日経225 SQ日: {sq_date_n225}, SQ値 {sq_n225}")
     logger.info(f"日経225ミニオプション SQ日: {sq_date_n225_mini}, SQ値 {sq_n225_mini}")
 
-    r_n225 = duckdb.sql(
+    n225_latest = duckdb.sql(
         f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225}'"
-    )
-    is_n225_value_exist = bool(r_n225.fetchone())
-    r_n225_mini = duckdb.sql(
+    ).fetchone()[0]
+    n225_mini_latest = duckdb.sql(
         f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
-    )
-    is_n225_mini_value_exist = bool(r_n225_mini.fetchone())
+    ).fetchone()[0]
+    is_n225_value_exist = n225_latest is not None
+    is_n225_mini_value_exist = n225_mini_latest is not None
 
     # データが更新されていなければ終了
     if all((is_n225_value_exist, is_n225_mini_value_exist)):
