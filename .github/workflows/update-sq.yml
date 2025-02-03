@@ -1,6 +1,8 @@
 name: update-sq
 
-on: [push]
+on:
+  schedule:
+    - cron: '50 6 * * 5'  # 毎週金曜日の15時50分(JST)
 jobs:
   update-sq:
     name: python
