@@ -1,0 +1,15 @@
+[day]
+start = "08:45"
+end = "15:40"
+
+[day_closing]
+start = "15:40" 
+end = "15:45"
+
+[night]
+start = "17:00"
+end = "05:55"
+
+[night_closing]
+start = "05:55"
+end = "06:00"
