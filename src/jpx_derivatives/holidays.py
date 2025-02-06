@@ -59,26 +59,38 @@ def get_data() -> pd.Series:
     )
 
 
-def is_holiday(target_date: date | datetime | str) -> bool:
+def is_holiday(target_date: date | datetime | str | None = None) -> bool:
     """
     指定された日付が休日かどうかを判定する
 
     Args:
         target_date: 判定対象の日付（date型、datetime型、または'YYYY-MM-DD'形式の文字列）
+                    Noneの場合は現在の日時を使用
 
     Returns:
         bool: 休日の場合はTrue、営業日の場合はFalse
+        以下の場合にTrueを返します:
+        - 土曜日または日曜日
+        - JPX休場日（祝日、年末年始等）
     """
-    # URLからparquetファイルを読み込む
-    holidays_df = pd.read_parquet(
-        "https://github.com/fin-py/jpx-derivatives/raw/refs/heads/main/data/holidays.parquet"
-    )
+    # 引数がNoneの場合は現在の日時を使用
+    if target_date is None:
+        target_date = datetime.now()
 
     # 入力を日付型に変換
     if isinstance(target_date, str):
         target_date = pd.to_datetime(target_date).date()
-    elif isinstance(target_date, datetime):
+    elif isinstance(target_date, type(datetime.now())):
         target_date = target_date.date()
+
+    # 土日判定
+    if target_date.weekday() >= 5:  # 5=土曜日, 6=日曜日
+        return True
+
+    # URLからparquetファイルを読み込む
+    holidays_df = pd.read_parquet(
+        "https://github.com/fin-py/jpx-derivatives/raw/refs/heads/main/data/holidays.parquet"
+    )
 
     # 休日一覧と照合
     return target_date in holidays_df['Date'].dt.date.values
