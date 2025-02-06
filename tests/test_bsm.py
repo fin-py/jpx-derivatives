@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from bsm import (
+from jpx_derivatives.bsm import (
     d1,
     d2,
     delta_call,
