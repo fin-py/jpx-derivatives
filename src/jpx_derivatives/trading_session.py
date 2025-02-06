@@ -5,19 +5,19 @@ from enum import Enum
 # 取引時間の設定
 TRADING_HOURS = {
     "day": {
-        "start": time(9, 0),
-        "end": time(11, 30)
+        "start": time(8, 45),
+        "end": time(15, 40)
     },
     "day_closing": {
-        "start": time(11, 30),
-        "end": time(11, 45)
+        "start": time(15, 40),
+        "end": time(15, 45)
     },
     "night": {
-        "start": time(16, 30),
-        "end": time(5, 30)
+        "start": time(17, 0),
+        "end": time(5, 55)
     },
     "night_closing": {
-        "start": time(5, 30),
+        "start": time(5, 55),
         "end": time(6, 0)
     },
 }

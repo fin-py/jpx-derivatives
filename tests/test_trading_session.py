@@ -11,19 +11,19 @@ from jpx_derivatives import (
 # テスト用設定
 test_config = {
     "day": {
-        "start": time(9, 0),
-        "end": time(11, 30)
+        "start": time(8, 45),
+        "end": time(15, 40)
     },
     "day_closing": {
-        "start": time(11, 30),
-        "end": time(11, 45)
+        "start": time(15, 40),
+        "end": time(15, 45)
     },
     "night": {
-        "start": time(16, 30),
-        "end": time(5, 30)
+        "start": time(17, 0),
+        "end": time(5, 55)
     },
     "night_closing": {
-        "start": time(5, 30),
+        "start": time(5, 55),
         "end": time(6, 0)
     },
 }
@@ -32,13 +32,13 @@ test_config = {
 def test_get_current_session_day(monkeypatch):
     """現在のセッション日を取得するテスト"""
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    dt = datetime(2023, 1, 1, 10, 0)
+    dt = datetime(2023, 1, 1, 9, 0)  # 8:45-15:40の間
     assert get_current_session(dt) == TradingSession.DAY
 
 
 def test_get_current_session_day_closing(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    dt = datetime(2023, 1, 1, 11, 32)
+    dt = datetime(2023, 1, 1, 15, 42)  # 15:40-15:45の間
     assert get_current_session(dt) == TradingSession.DAY_CLOSING
 
 
@@ -55,23 +55,23 @@ def test_get_current_session_night(monkeypatch):
 
 def test_get_current_session_night_closing(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    # 05:40 は 夜間クロージング (NIGHT_CLOSING)
-    dt = datetime(2023, 1, 1, 5, 40)
+    # 5:57 は 夜間クロージング (NIGHT_CLOSING)
+    dt = datetime(2023, 1, 1, 5, 57)
     assert get_current_session(dt) == TradingSession.NIGHT_CLOSING
 
 
 def test_get_current_session_off_hours(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    dt = datetime(2023, 1, 1, 8, 0)
+    dt = datetime(2023, 1, 1, 7, 0)  # 6:00-8:45の間
     assert get_current_session(dt) == TradingSession.OFF_HOURS
 
 
 def test_get_closing_time_day(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    # 日中取引の場合、day_closing.end (11:45) の当日日時
+    # 日中取引の場合、day_closing.end (15:45) の当日日時
     dt = datetime(2023, 1, 2, 10, 0)
     closing = get_closing_time(dt)
-    expected = datetime.combine(dt.date(), time(11, 45))
+    expected = datetime.combine(dt.date(), time(15, 45))
     assert closing == expected
 
 
@@ -97,7 +97,7 @@ def test_get_closing_time_night_tomorrow(monkeypatch):
 def test_get_closing_time_night_closing(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
     # NIGHT_CLOSING の場合、当日の 06:00 を返す
-    dt = datetime(2023, 1, 3, 5, 40)
+    dt = datetime(2023, 1, 3, 5, 57)
     closing = get_closing_time(dt)
     expected = datetime.combine(dt.date(), time(6, 0))
     assert closing == expected
@@ -105,6 +105,6 @@ def test_get_closing_time_night_closing(monkeypatch):
 
 def test_get_closing_time_off_hours(monkeypatch):
     monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
-    dt = datetime(2023, 1, 3, 12, 0)
+    dt = datetime(2023, 1, 3, 7, 0)
     closing = get_closing_time(dt)
     assert closing is None
