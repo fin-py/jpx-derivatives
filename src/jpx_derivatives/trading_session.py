@@ -1,8 +1,26 @@
+import os
 from datetime import datetime, time, timedelta
 from enum import Enum
-from pathlib import Path
 
-import tomllib
+# 取引時間の設定
+TRADING_HOURS = {
+    "day": {
+        "start": time(9, 0),
+        "end": time(11, 30)
+    },
+    "day_closing": {
+        "start": time(11, 30),
+        "end": time(11, 45)
+    },
+    "night": {
+        "start": time(16, 30),
+        "end": time(5, 30)
+    },
+    "night_closing": {
+        "start": time(5, 30),
+        "end": time(6, 0)
+    },
+}
 
 
 class TradingSession(Enum):
@@ -14,16 +32,8 @@ class TradingSession(Enum):
 
 
 def load_trading_hours() -> dict:
-    """取引時間設定を読み込む"""
-    config_path = Path(__file__).parent / "config" / "trading_hours.toml"
-    with open(config_path, "rb") as f:
-        return tomllib.load(f)
-
-
-def parse_time(time_str: str) -> time:
-    """HH:MM形式の文字列をtime型に変換"""
-    hour, minute = map(int, time_str.split(":"))
-    return time(hour, minute)
+    """取引時間設定を返す"""
+    return TRADING_HOURS
 
 
 def get_current_session(current_datetime: datetime = None) -> TradingSession:
@@ -37,27 +47,19 @@ def get_current_session(current_datetime: datetime = None) -> TradingSession:
     config = load_trading_hours()
 
     # 日中取引
-    day_start = parse_time(config["day"]["start"])
-    day_end = parse_time(config["day"]["end"])
-    if day_start <= current_time < day_end:
+    if config["day"]["start"] <= current_time < config["day"]["end"]:
         return TradingSession.DAY
 
     # 日中クロージングオークション
-    day_closing_start = parse_time(config["day_closing"]["start"])
-    day_closing_end = parse_time(config["day_closing"]["end"])
-    if day_closing_start <= current_time < day_closing_end:
+    if config["day_closing"]["start"] <= current_time < config["day_closing"]["end"]:
         return TradingSession.DAY_CLOSING
 
     # 夜間取引（日付をまたぐケースに対応）
-    night_start = parse_time(config["night"]["start"])
-    night_end = parse_time(config["night"]["end"])
-    if night_start <= current_time or current_time < night_end:
+    if config["night"]["start"] <= current_time or current_time < config["night"]["end"]:
         return TradingSession.NIGHT
 
     # 夜間クロージングオークション
-    night_closing_start = parse_time(config["night_closing"]["start"])
-    night_closing_end = parse_time(config["night_closing"]["end"])
-    if night_closing_start <= current_time < night_closing_end:
+    if config["night_closing"]["start"] <= current_time < config["night_closing"]["end"]:
         return TradingSession.NIGHT_CLOSING
 
     # 立会時間外
@@ -80,17 +82,17 @@ def get_closing_time(current_datetime: datetime = None) -> datetime:
     current_session = get_current_session(current_datetime)
 
     if current_session in [TradingSession.DAY, TradingSession.DAY_CLOSING]:
-        closing_time = parse_time(config["day_closing"]["end"])
+        closing_time = config["day_closing"]["end"]
         candidate = datetime.combine(current_datetime.date(), closing_time)
         if candidate <= current_datetime:
             candidate += timedelta(days=1)
         return candidate
 
     elif current_session in [TradingSession.NIGHT, TradingSession.NIGHT_CLOSING]:
-        closing_time = parse_time(config["night_closing"]["end"])
+        closing_time = config["night_closing"]["end"]
         candidate = datetime.combine(current_datetime.date(), closing_time)
         if current_session == TradingSession.NIGHT:
-            night_closing_start = parse_time(config["night_closing"]["start"])
+            night_closing_start = config["night_closing"]["start"]
             # もし現在時刻が night_closing の開始時刻以降であれば、終了日時を翌日に設定
             if current_datetime.time() >= night_closing_start:
                 candidate = datetime.combine(current_datetime.date() + timedelta(days=1), closing_time)
