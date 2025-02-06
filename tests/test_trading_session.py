@@ -1,4 +1,5 @@
 from datetime import datetime, time, timedelta
+from unittest.mock import patch
 
 import pytest
 
@@ -6,6 +7,7 @@ from jpx_derivatives import (
     TradingSession,
     get_closing_time,
     get_current_session,
+    is_trading_hours,
 )
 
 # テスト用設定
@@ -108,3 +110,35 @@ def test_get_closing_time_off_hours(monkeypatch):
     dt = datetime(2023, 1, 3, 7, 0)
     closing = get_closing_time(dt)
     assert closing is None
+
+
+@pytest.mark.parametrize(
+    "test_datetime,expected",
+    [
+        (datetime(2024, 1, 4, 9, 0), True),    # 日中取引
+        (datetime(2024, 1, 4, 15, 42), True),  # 日中クロージング
+        (datetime(2024, 1, 4, 17, 30), True),  # 夜間取引
+        (datetime(2024, 1, 5, 5, 57), True),   # 夜間クロージング
+        (datetime(2024, 1, 4, 7, 0), False),   # 立会時間外
+        (datetime(2024, 1, 1, 10, 0), False),  # 休日
+        (datetime(2024, 1, 6, 10, 0), False),  # 土曜日
+    ],
+)
+def test_is_trading_hours(test_datetime, expected, monkeypatch):
+    """取引可能時間の判定テスト"""
+    monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
+    assert is_trading_hours(test_datetime) == expected
+
+
+def test_is_trading_hours_no_args(monkeypatch):
+    """引数なしで現在時刻の取引可能時間判定ができることを確認"""
+    mock_datetime = datetime(2024, 1, 4, 9, 0)  # 取引時間内
+    with patch('jpx_derivatives.trading_session.datetime') as mock_date:
+        mock_date.now.return_value = mock_datetime
+        monkeypatch.setattr("jpx_derivatives.trading_session.load_trading_hours", lambda: test_config)
+        assert is_trading_hours() is True
+
+    mock_datetime = datetime(2024, 1, 1, 9, 0)  # 休日
+    with patch('jpx_derivatives.trading_session.datetime') as mock_date:
+        mock_date.now.return_value = mock_datetime
+        assert is_trading_hours() is False

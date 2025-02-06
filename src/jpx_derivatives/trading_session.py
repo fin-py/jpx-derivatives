@@ -2,6 +2,8 @@ import os
 from datetime import datetime, time, timedelta
 from enum import Enum
 
+from jpx_derivatives.holidays import is_holiday
+
 # 取引時間の設定
 TRADING_HOURS = {
     "day": {
@@ -106,3 +108,25 @@ def get_closing_time(current_datetime: datetime = None) -> datetime:
 
     else:
         return None
+
+
+def is_trading_hours(current_datetime: datetime = None) -> bool:
+    """
+    指定された日時が取引可能な時間帯かどうかを判定する
+
+    Args:
+        current_datetime: 判定対象の日時（Noneの場合は現在時刻を使用）
+
+    Returns:
+        bool: 取引可能な時間の場合はTrue、それ以外（休日・立会時間外）の場合はFalse
+    """
+    if current_datetime is None:
+        current_datetime = datetime.now()
+
+    # 休日判定
+    if is_holiday(current_datetime):
+        return False
+
+    # 立会時間判定
+    current_session = get_current_session(current_datetime)
+    return current_session not in [TradingSession.OFF_HOURS]
