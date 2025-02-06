@@ -1,6 +1,8 @@
+from datetime import date, datetime
+
 import pandas as pd
 
-from config import data_dir
+from jpx_derivatives.config import data_dir
 
 
 def get_data() -> pd.Series:
@@ -27,6 +29,9 @@ def get_data() -> pd.Series:
                 "2021-12-31",
                 "2022-01-02",
                 "2022-01-03",
+                "2023-01-01",
+                "2024-01-01",
+                "2025-01-01",
             ]
         )
     )
@@ -54,10 +59,36 @@ def get_data() -> pd.Series:
     )
 
 
-def main() -> None:
+def is_holiday(target_date: date | datetime | str) -> bool:
+    """
+    指定された日付が休日かどうかを判定する
+
+    Args:
+        target_date: 判定対象の日付（date型、datetime型、または'YYYY-MM-DD'形式の文字列）
+
+    Returns:
+        bool: 休日の場合はTrue、営業日の場合はFalse
+    """
+    # URLからparquetファイルを読み込む
+    holidays_df = pd.read_parquet(
+        "https://github.com/fin-py/jpx-derivatives/raw/refs/heads/main/data/holidays.parquet"
+    )
+
+    # 入力を日付型に変換
+    if isinstance(target_date, str):
+        target_date = pd.to_datetime(target_date).date()
+    elif isinstance(target_date, datetime):
+        target_date = target_date.date()
+
+    # 休日一覧と照合
+    return target_date in holidays_df['Date'].dt.date.values
+
+
+def save_holidays_to_parquet():
+    """休日の一覧をparquetファイルに保存する"""
     holidays = pd.DataFrame(get_data(), columns=["Date"])
     holidays.to_parquet(data_dir / "holidays.parquet")
 
 
 if __name__ == "__main__":
-    main()
+    save_holidays_to_parquet()

@@ -2,8 +2,10 @@ import logging
 import logging.config
 from pathlib import Path
 
-base_dir = Path()
-config_dir = base_dir / "config"
+# パッケージのルートディレクトリを取得
+base_dir = Path(__file__).resolve().parent.parent.parent
+
+# データディレクトリ
 data_dir = base_dir / "data"
 data_dir.mkdir(exist_ok=True)
 
