@@ -17,6 +17,11 @@ jobs:
       - name: Run Script
         id: update_script
         run: uv run python src/jpx_derivatives/sq.py
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          rclone_config: ${{ secrets.RCLONE_CONFIG }}
+      - run: rclone copy data/special_quotation.parquet jpx-derivatives:jpx-derivatives-test/
       - name: Commit and Push
         run: |
             git config user.name "github-actions[bot]"
