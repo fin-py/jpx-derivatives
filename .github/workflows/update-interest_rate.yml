@@ -1,9 +1,8 @@
 name: update-interest_rate
 
 on:
-  push:
-    branches:
-      - main
+  schedule:
+    - cron: '0 8 * * 1-5'
 jobs:
   update-sq:
     name: python
