@@ -1,0 +1,31 @@
+name: update-interest_rate
+
+on:
+  push:
+    branches:
+      - main
+jobs:
+  update-sq:
+    name: python
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+      - name: Install the project
+        run: uv sync --all-extras --dev
+      - name: Run Script
+        id: update_script
+        run: uv run python src/jpx_derivatives/get_interest_rate_torf.py
+      - name: Setup Rclone
+        uses: AnimMouse/setup-rclone@v1
+        with:
+          rclone_config: ${{ secrets.RCLONE_CONFIG }}
+      - run: rclone copy data/interest_rate_torf.parquet jpx-derivatives:jpx-derivatives-test/
+      - name: Commit and Push
+        run: |
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add .
+            git diff --staged --exit-code || git commit -m "update data" && git push
