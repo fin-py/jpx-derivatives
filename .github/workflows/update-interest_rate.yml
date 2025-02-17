@@ -15,6 +15,8 @@ jobs:
         uses: astral-sh/setup-uv@v5
       - name: Install the project
         run: uv sync --all-extras --dev
+      - name: Ensure browsers are installed
+        run: uv run -m playwright install --with-deps
       - name: Run Script
         id: update_script
         run: uv run python src/jpx_derivatives/get_interest_rate_torf.py
