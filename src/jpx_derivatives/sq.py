@@ -6,10 +6,9 @@ import pandas as pd
 import pyarrow as pa
 import pyarrow.parquet as pq
 import requests
+from config import data_dir, setup_logging
 from dateutil.relativedelta import relativedelta
 from lxml import html
-
-from config import data_dir, setup_logging
 
 logger_name = setup_logging(__file__)
 logger = logging.getLogger(logger_name)
@@ -227,10 +226,10 @@ def get_sq_data() -> tuple[int] | int:
     )
     tree = html.fromstring(res.content)
     product_category_1 = tree.xpath(
-        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[1]'
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[1]'
     )[0].text_content()
     product_category_2 = tree.xpath(
-        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[1]'
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[3]/td[1]'
     )[0].text_content()
 
     try:
@@ -242,17 +241,17 @@ def get_sq_data() -> tuple[int] | int:
         )
         return 1
 
-    sq_date_n225 = tree.xpath('//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[2]')[
+    sq_date_n225 = tree.xpath('//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[2]')[
         0
     ].text_content()
     sq_date_n225_mini = tree.xpath(
-        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[2]'
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[3]/td[2]'
     )[0].text_content()
-    sq_n225_raw = tree.xpath('//*[@id="readArea"]/div[3]/div/table/tbody/tr[2]/td[3]')[
+    sq_n225_raw = tree.xpath('//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[3]')[
         0
     ].text_content()
     sq_n225_mini_raw = tree.xpath(
-        '//*[@id="readArea"]/div[3]/div/table/tbody/tr[3]/td[3]'
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[3]/td[3]'
     )[0].text_content()
     sq_n225 = float(sq_n225_raw.replace(",", ""))
     sq_n225_mini = float(sq_n225_mini_raw.replace(",", ""))
