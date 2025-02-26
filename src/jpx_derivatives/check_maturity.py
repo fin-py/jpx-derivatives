@@ -37,12 +37,14 @@ class maturity_info_class:
         dt: datetime.datetime,
         maturity_n: int,
         large_mini: str,
-    ) -> tuple[datetime.datetime, datetime.datetime]:
+    ) -> tuple[datetime.datetime, datetime.datetime, str]:
         """
         渡されたdtの第[maturity_n]限月の最終取引日時とSQ日を返す。
         dt: 基準日時
         maturity_n: 2の場合第2限月を返す、マイナスも可
         large_mini: "large" / "mini"
+        return: lasttradingday, sqdate, contractmonth
+        contractmonthは "2025-03", "2025-03-W5" など
         """
         if maturity_n == 0:
             raise ValueError(f"maturity_nは0以外で指定してください。（マイナスも可）")
@@ -73,4 +75,5 @@ class maturity_info_class:
 
         lasttradingday = sqinfo["LastTradingDay"].iloc[abs(maturity_n) - 1]
         sqdate = sqinfo["SpecialQuotationDay"].iloc[abs(maturity_n) - 1]
-        return lasttradingday, sqdate
+        contractmonth = sqinfo["ContractMonth"].iloc[abs(maturity_n) - 1]
+        return lasttradingday, sqdate, contractmonth
