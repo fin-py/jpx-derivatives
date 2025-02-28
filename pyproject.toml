@@ -1,6 +1,6 @@
 [project]
 name = "jpx-derivatives"
-version = "0.1.0.dev0"
+version = "0.1.0.dev1"
 description = "JPX Derivatives Data Management"
 readme = "README.md"
 requires-python = ">=3.12"
