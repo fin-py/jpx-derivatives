@@ -1,6 +1,7 @@
 import os
 import math
 from datetime import datetime
+import time
 import asyncio
 
 from playwright.async_api import async_playwright, TimeoutError
@@ -64,10 +65,9 @@ async def get_interest_rate_torf(
         browser = await p.chromium.launch(headless=True, args=chromium_args)
         context = await browser.new_context()
         page = await context.new_page()
-        await page.goto(url)
 
-        # date
         try:
+            await page.goto(url)
             # 値が読み込まれるまで待機
             await page.wait_for_selector(f"xpath={date_xpath}", timeout=20000)
         except TimeoutError:
@@ -166,8 +166,15 @@ if __name__ == "__main__":
     logger_name = setup_logging(__file__)
     logger = logging.getLogger(logger_name)
 
-    target_date, data_interest_rate = asyncio.run(get_interest_rate_torf(logger))
-    if len(data_interest_rate) == 0:
+    # 3回リトライする
+    for _ in range(3):
+        target_date, data_interest_rate = asyncio.run(get_interest_rate_torf(logger))
+        # 失敗した場合時間をおいてリトライ
+        if len(data_interest_rate) == 0:
+            time.sleep(10)
+            continue
+        break
+    else:
         raise ValueError(f"TORF金利スクレイピングエラー")
 
     output_interest_rate_parquet(data_interest_rate, target_date)
