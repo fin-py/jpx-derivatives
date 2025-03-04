@@ -18,22 +18,38 @@ class StaticDataProviderBase(ABC):
 
     @abstractmethod
     def get_contract_months(self) -> List[str]:
-        """限月リストを取得する"""
+        """限月リストを取得する
+        
+        Returns:
+            List[str]: 限月のリスト
+        """
         pass
 
     @abstractmethod
     def get_last_trading_days(self) -> List[datetime.date]:
-        """取引最終年月日リストを取得する"""
+        """取引最終年月日リストを取得する
+        
+        Returns:
+            List[datetime.date]: 取引最終年月日のリスト
+        """
         pass
 
     @abstractmethod
     def get_special_quotation_days(self) -> List[datetime.date]:
-        """SQ日リストを取得する"""
+        """SQ日リストを取得する
+        
+        Returns:
+            List[datetime.date]: SQ日のリスト
+        """
         pass
 
     @abstractmethod
     def get_interest_rates(self) -> List[float]:
-        """理論価格計算用金利リストを取得する"""
+        """理論価格計算用金利リストを取得する
+        
+        Returns:
+            List[float]: 金利のリスト
+        """
         pass
 
 
@@ -48,7 +64,9 @@ class GitHubStaticDataProvider(StaticDataProviderBase):
     ):
         """
         Args:
-            product_count: 限月数
+            product_count (int): 限月数
+            dt (datetime.datetime, optional): 日付。指定しない場合は現在の日付を使用
+            contract_frequency (str, optional): 限月の取得頻度。デフォルトは "monthly"
         """
         self.product_count = product_count
         self.base_url = (
@@ -61,8 +79,21 @@ class GitHubStaticDataProvider(StaticDataProviderBase):
 
         yyyymmdd = f"{dt:%Y-%m-%d}"
         special_quotation = duckdb.read_parquet(self.sq_url)
+        self.sq_data = self._fetch_sq_data(special_quotation, yyyymmdd, contract_frequency)
+
+    def _fetch_sq_data(self, special_quotation, yyyymmdd, contract_frequency):
+        """限月データを取得する共通メソッド
+        
+        Args:
+            special_quotation: 特殊見積もりデータ
+            yyyymmdd (str): 日付（YYYY-MM-DD形式）
+            contract_frequency (str): 限月の取得頻度
+            
+        Returns:
+            pd.DataFrame: 限月データのデータフレーム
+        """
         if contract_frequency == "monthly":
-            self.sq_data = (
+            return (
                 special_quotation.filter(f"SpecialQuotationDay > '{yyyymmdd}'")
                 .filter("ContractMonth NOT LIKE '%-W%'")
                 .order("SpecialQuotationDay")
@@ -70,15 +101,14 @@ class GitHubStaticDataProvider(StaticDataProviderBase):
                 .df()
             )
         elif contract_frequency == "weekly":
-            self.sq_data = (
+            return (
                 special_quotation.filter(f"SpecialQuotationDay > '{yyyymmdd}'")
-                .filter("ContractMonth NOT LIKE '%-W%'")
                 .order("SpecialQuotationDay")
                 .limit(self.product_count)
                 .df()
             )
         else:
-            raise ValueError
+            raise ValueError("Invalid contract frequency")
 
     def get_contract_months(self) -> List[str]:
         return self.sq_data.loc[:, "ContractMonth"].to_list()
@@ -175,4 +205,3 @@ class Client:
 
     def get_current_value(self, code: str) -> pd.DataFrame:
         return self.data_provider.get_current_value(code)
-
