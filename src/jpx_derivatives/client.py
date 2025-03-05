@@ -153,7 +153,7 @@ class CloudflareR2StaticDataProvider(HttpsStaticDataProvider):
     ):
         super().__init__(product_count, dt, contract_frequency)
         self.set_data(
-            "https://public.quokka.trade"
+            "https://jpx-derivatives-public.quokka.trade"
         )
 
 
