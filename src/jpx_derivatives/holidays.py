@@ -87,10 +87,13 @@ def is_holiday(target_date: date | datetime | str | None = None) -> bool:
     if target_date.weekday() >= 5:  # 5=土曜日, 6=日曜日
         return True
 
-    # URLからparquetファイルを読み込む
-    holidays_df = pd.read_parquet(
-        "https://github.com/fin-py/jpx-derivatives/raw/refs/heads/main/data/holidays.parquet"
-    )
+    holidays_df = pd.read_parquet(data_dir / "holidays.parquet")
+
+    # 対象の年がなければ祝日データを更新
+    if target_date.year not in holidays_df["Date"].dt.year.unique():
+        save_holidays_to_parquet()
+        # 再度読み込み
+        holidays_df = pd.read_parquet(data_dir / "holidays.parquet")
 
     # 休日一覧と照合
     return target_date in holidays_df['Date'].dt.date.values
