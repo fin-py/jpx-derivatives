@@ -8,7 +8,8 @@
 ```{toctree}
 :caption: 'Contents:'
 :maxdepth: 2
-client.md
+client
+bsm
 ```
 
 # Indices and tables
