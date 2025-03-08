@@ -9,6 +9,7 @@
 :caption: 'Contents:'
 :maxdepth: 2
 client
+trading_session
 bsm
 ```
 
