@@ -4,9 +4,11 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import duckdb
+from duckdb import DuckDBPyRelation
 import pandas as pd
 
 from jpx_derivatives.config import setup_logging
+from jpx_derivatives.get_interest_rate_torf import interpolate_interest_rate
 
 # ロガーの設定
 logger_name = setup_logging(__file__)
@@ -84,6 +86,8 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
         self.sq_data = self._fetch_sq_data(
             special_quotation, yyyymmdd, self.contract_frequency
         )
+        interest_rate = duckdb.read_parquet(self.interest_rate_url)
+        self.interest_rate = self._fetch_interest_rate(interest_rate, yyyymmdd)
 
     def _fetch_sq_data(self, special_quotation, yyyymmdd, contract_frequency):
         """限月データを取得する共通メソッド
@@ -114,6 +118,35 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
         else:
             raise ValueError("Invalid contract frequency")
 
+    def _fetch_interest_rate(
+        self, interest_rate: DuckDBPyRelation, yyyymmdd: str
+    ) -> dict:
+        """金利データを取得する共通メソッド
+
+        Args:
+            interest_rate: 金利データ
+            yyyymmdd (str): 日付（YYYY-MM-DD形式）
+
+        Returns:
+            pd.DataFrame: 金利データのデータフレーム
+        """
+        # 条件に当てはまる最新の日付のデータのみ抽出
+        # 行データをフラットな辞書に変換する方法
+        df = (
+            interest_rate.filter(f"date <= '{yyyymmdd}'")
+            .order("date DESC")
+            .limit(1)
+            .df()
+        )
+        result_dict = df.drop("date", axis=1).iloc[0].to_dict()
+
+        # keyを変換
+        conversion = {"InterestRate1M": 30, "InterestRate3M": 90, "InterestRate6M": 180}
+        for before, after in conversion.items():
+            result_dict[after] = result_dict.pop(before)
+
+        return result_dict
+
     def get_contract_months(self) -> List[str]:
         return self.sq_data.loc[:, "ContractMonth"].to_list()
 
@@ -123,8 +156,15 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
     def get_special_quotation_days(self) -> List[datetime.date]:
         return self.sq_data.loc[:, "SpecialQuotationDay"].dt.date.to_list()
 
-    def get_interest_rates(self) -> List[float]:
-        return [] * self.product_count
+    def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
+        """
+        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        """
+        if self.product_count != len(remaining_days):
+            raise ValueError(f"remaining_daysはproduct_countと同じ要素数を入れる")
+
+        interest_rates = interpolate_interest_rate(self.interest_rate, remaining_days)
+        return list(interest_rates.values())
 
 
 class GitHubStaticDataProvider(HttpsStaticDataProvider):
@@ -198,8 +238,11 @@ class AutoStaticDataProvider(StaticDataProviderBase):
     def get_special_quotation_days(self) -> List[datetime.date]:
         return self.provider.get_special_quotation_days()
 
-    def get_interest_rates(self) -> List[float]:
-        return self.provider.get_interest_rates()
+    def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
+        """
+        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        """
+        return self.provider.get_interest_rates(remaining_days)
 
 
 class DataProviderBase(ABC):
@@ -256,8 +299,11 @@ class Client:
     def get_special_quotation_days(self) -> List[datetime.date]:
         return self.static_provider.get_special_quotation_days()
 
-    def get_interest_rates(self) -> List[float]:
-        return self.static_provider.get_interest_rates()
+    def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
+        """
+        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        """
+        return self.static_provider.get_interest_rates(remaining_days)
 
     def get_current_value(self, code: str) -> pd.DataFrame:
         return self.data_provider.get_current_value(code)
