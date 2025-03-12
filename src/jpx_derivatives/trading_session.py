@@ -6,22 +6,10 @@ from jpx_derivatives.holidays import is_holiday
 
 # 取引時間の設定
 TRADING_HOURS = {
-    "day": {
-        "start": time(8, 45),
-        "end": time(15, 40)
-    },
-    "day_closing": {
-        "start": time(15, 40),
-        "end": time(15, 45)
-    },
-    "night": {
-        "start": time(17, 0),
-        "end": time(5, 55)
-    },
-    "night_closing": {
-        "start": time(5, 55),
-        "end": time(6, 0)
-    },
+    "day": {"start": time(8, 45), "end": time(15, 40)},
+    "day_closing": {"start": time(15, 40), "end": time(15, 45)},
+    "night": {"start": time(17, 0), "end": time(5, 55)},
+    "night_closing": {"start": time(5, 55), "end": time(6, 0)},
 }
 
 
@@ -31,6 +19,12 @@ class TradingSession(Enum):
     NIGHT = "NIGHT"  # 夜間取引
     NIGHT_CLOSING = "NIGHT_CLOSING"  # 夜間クロージングオークション
     OFF_HOURS = "OFF_HOURS"  # 立会時間外
+
+    def __str__(self):
+        return self.value
+
+    def __repr__(self):
+        return self.value
 
 
 def load_trading_hours() -> dict:
@@ -57,11 +51,18 @@ def get_current_session(current_datetime: datetime = None) -> TradingSession:
         return TradingSession.DAY_CLOSING
 
     # 夜間取引（日付をまたぐケースに対応）
-    if config["night"]["start"] <= current_time or current_time < config["night"]["end"]:
+    if (
+        config["night"]["start"] <= current_time
+        or current_time < config["night"]["end"]
+    ):
         return TradingSession.NIGHT
 
     # 夜間クロージングオークション
-    if config["night_closing"]["start"] <= current_time < config["night_closing"]["end"]:
+    if (
+        config["night_closing"]["start"]
+        <= current_time
+        < config["night_closing"]["end"]
+    ):
         return TradingSession.NIGHT_CLOSING
 
     # 立会時間外
@@ -97,7 +98,9 @@ def get_closing_time(current_datetime: datetime = None) -> datetime:
             night_closing_start = config["night_closing"]["start"]
             # もし現在時刻が night_closing の開始時刻以降であれば、終了日時を翌日に設定
             if current_datetime.time() >= night_closing_start:
-                candidate = datetime.combine(current_datetime.date() + timedelta(days=1), closing_time)
+                candidate = datetime.combine(
+                    current_datetime.date() + timedelta(days=1), closing_time
+                )
             else:
                 if candidate <= current_datetime:
                     candidate += timedelta(days=1)
