@@ -9,6 +9,7 @@ import pandas as pd
 
 from jpx_derivatives.config import setup_logging
 from jpx_derivatives.get_interest_rate_torf import interpolate_interest_rate
+from jpx_derivatives.check_maturity import maturity_info_class
 
 # ロガーの設定
 logger_name = setup_logging(__file__)
@@ -28,20 +29,20 @@ class StaticDataProviderBase(ABC):
         pass
 
     @abstractmethod
-    def get_last_trading_days(self) -> List[datetime.date]:
+    def get_last_trading_days(self) -> List[datetime.datetime]:
         """取引最終年月日リストを取得する
 
         Returns:
-            List[datetime.date]: 取引最終年月日のリスト
+            List[datetime.datetime]: 取引最終年月日のリスト
         """
         pass
 
     @abstractmethod
-    def get_special_quotation_days(self) -> List[datetime.date]:
+    def get_special_quotation_days(self) -> List[datetime.datetime]:
         """SQ日リストを取得する
 
         Returns:
-            List[datetime.date]: SQ日のリスト
+            List[datetime.datetime]: SQ日のリスト
         """
         pass
 
@@ -86,6 +87,10 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
         self.sq_data = self._fetch_sq_data(
             special_quotation, yyyymmdd, self.contract_frequency
         )
+        # 限月関連クラス
+        self.maturity_class = maturity_info_class(self.sq_data)
+
+        # 金利
         interest_rate = duckdb.read_parquet(self.interest_rate_url)
         self.interest_rate = self._fetch_interest_rate(interest_rate, yyyymmdd)
 
@@ -105,14 +110,14 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
                 special_quotation.filter(f"SpecialQuotationDay > '{yyyymmdd}'")
                 .filter("ContractMonth NOT LIKE '%-W%'")
                 .order("SpecialQuotationDay")
-                .limit(self.product_count)
+                .limit(self.product_count + 1)
                 .df()
             )
         elif contract_frequency == "weekly":
             return (
                 special_quotation.filter(f"SpecialQuotationDay > '{yyyymmdd}'")
                 .order("SpecialQuotationDay")
-                .limit(self.product_count)
+                .limit(self.product_count + 1)
                 .df()
             )
         else:
@@ -148,17 +153,32 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
         return result_dict
 
     def get_contract_months(self) -> List[str]:
-        return self.sq_data.loc[:, "ContractMonth"].to_list()
+        return [
+            self.maturity_class.check_option_maturity(
+                self.dt, i, self.contract_frequency
+            )[2]
+            for i in range(1, self.product_count + 1)
+        ]
 
-    def get_last_trading_days(self) -> List[datetime.date]:
-        return self.sq_data.loc[:, "LastTradingDay"].dt.date.to_list()
+    def get_last_trading_days(self) -> List[datetime.datetime]:
+        return [
+            self.maturity_class.check_option_maturity(
+                self.dt, i, self.contract_frequency
+            )[0]
+            for i in range(1, self.product_count + 1)
+        ]
 
-    def get_special_quotation_days(self) -> List[datetime.date]:
-        return self.sq_data.loc[:, "SpecialQuotationDay"].dt.date.to_list()
+    def get_special_quotation_days(self) -> List[datetime.datetime]:
+        return [
+            self.maturity_class.check_option_maturity(
+                self.dt, i, self.contract_frequency
+            )[1]
+            for i in range(1, self.product_count + 1)
+        ]
 
     def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
         """
-        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        remaining_days: 取得したい金利の残存日数 [15.3, 45.3, 75.3]など
         """
         if self.product_count != len(remaining_days):
             raise ValueError(f"remaining_daysはproduct_countと同じ要素数を入れる")
@@ -232,15 +252,15 @@ class AutoStaticDataProvider(StaticDataProviderBase):
     def get_contract_months(self) -> List[str]:
         return self.provider.get_contract_months()
 
-    def get_last_trading_days(self) -> List[datetime.date]:
+    def get_last_trading_days(self) -> List[datetime.datetime]:
         return self.provider.get_last_trading_days()
 
-    def get_special_quotation_days(self) -> List[datetime.date]:
+    def get_special_quotation_days(self) -> List[datetime.datetime]:
         return self.provider.get_special_quotation_days()
 
     def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
         """
-        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        remaining_days: 取得したい金利の残存日数 [15.3, 45.3, 75.3]など
         """
         return self.provider.get_interest_rates(remaining_days)
 
@@ -293,15 +313,15 @@ class Client:
     def get_contract_months(self) -> List[str]:
         return self.static_provider.get_contract_months()
 
-    def get_last_trading_days(self) -> List[datetime.date]:
+    def get_last_trading_days(self) -> List[datetime.datetime]:
         return self.static_provider.get_last_trading_days()
 
-    def get_special_quotation_days(self) -> List[datetime.date]:
+    def get_special_quotation_days(self) -> List[datetime.datetime]:
         return self.static_provider.get_special_quotation_days()
 
     def get_interest_rates(self, remaining_days: list[float]) -> List[float]:
         """
-        remaining_days: 取得したい金利の残存日数 [15, 45, 75]など
+        remaining_days: 取得したい金利の残存日数 [15.3, 45.3, 75.3]など
         """
         return self.static_provider.get_interest_rates(remaining_days)
 
