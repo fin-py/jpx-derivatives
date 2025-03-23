@@ -141,7 +141,7 @@ wheels = [
 
 [[package]]
 name = "jpx-derivatives"
-version = "0.1.0.dev2"
+version = "0.1.0.dev4"
 source = { editable = "." }
 dependencies = [
     { name = "duckdb" },
