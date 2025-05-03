@@ -4,12 +4,12 @@ from abc import ABC, abstractmethod
 from typing import List
 
 import duckdb
-from duckdb import DuckDBPyRelation
 import pandas as pd
+from duckdb import DuckDBPyRelation
 
+from jpx_derivatives.check_maturity import maturity_info_class
 from jpx_derivatives.config import setup_logging
 from jpx_derivatives.get_interest_rate_torf import interpolate_interest_rate
-from jpx_derivatives.check_maturity import maturity_info_class
 
 # ロガーの設定
 logger_name = setup_logging(__file__)
@@ -154,25 +154,25 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
 
     def get_contract_months(self) -> List[str]:
         return [
-            self.maturity_class.check_option_maturity(
-                self.dt, i, self.contract_frequency
-            )[2]
+            self.maturity_class.get_contract_dates(self.dt, i, self.contract_frequency)[
+                2
+            ]
             for i in range(1, self.product_count + 1)
         ]
 
     def get_last_trading_days(self) -> List[datetime.datetime]:
         return [
-            self.maturity_class.check_option_maturity(
-                self.dt, i, self.contract_frequency
-            )[0]
+            self.maturity_class.get_contract_dates(self.dt, i, self.contract_frequency)[
+                0
+            ]
             for i in range(1, self.product_count + 1)
         ]
 
     def get_special_quotation_days(self) -> List[datetime.datetime]:
         return [
-            self.maturity_class.check_option_maturity(
-                self.dt, i, self.contract_frequency
-            )[1]
+            self.maturity_class.get_contract_dates(self.dt, i, self.contract_frequency)[
+                1
+            ]
             for i in range(1, self.product_count + 1)
         ]
 
@@ -181,7 +181,7 @@ class HttpsStaticDataProvider(StaticDataProviderBase):
         remaining_days: 取得したい金利の残存日数 [15.3, 45.3, 75.3]など
         """
         if self.product_count != len(remaining_days):
-            raise ValueError(f"remaining_daysはproduct_countと同じ要素数を入れる")
+            raise ValueError("remaining_daysはproduct_countと同じ要素数を入れる")
 
         interest_rates = interpolate_interest_rate(self.interest_rate, remaining_days)
         return list(interest_rates.values())
@@ -212,9 +212,7 @@ class CloudflareR2StaticDataProvider(HttpsStaticDataProvider):
         contract_frequency: str = "monthly",
     ):
         super().__init__(product_count, dt, contract_frequency)
-        self.set_data(
-            "https://jpx-derivatives-public.quokka.trade"
-        )
+        self.set_data("https://jpx-derivatives-public.quokka.trade")
 
 
 class AutoStaticDataProvider(StaticDataProviderBase):

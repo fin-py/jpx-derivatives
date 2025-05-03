@@ -79,95 +79,95 @@ class TestMaturityInfoClass:
         assert instance.sq_data["SpecialQuotationDay"].iloc[0].hour == 9
         assert instance.sq_data["SpecialQuotationDay"].iloc[0].minute == 0
 
-    def test_check_option_maturity_monthly_positive(self, maturity_info):
-        """月次限月で正のnth_contract_monthでcheck_option_maturityをテスト"""
+    def test_get_contract_dates_monthly_positive(self, maturity_info):
+        """月次限月で正のnth_contract_monthでget_contract_datesをテスト"""
         dt = datetime.datetime(
             2024, 9, 1, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
 
         # 第1限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 1, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 1, "monthly")
         assert cm == "2024-09"
         assert ltd.year == 2024 and ltd.month == 9 and ltd.day == 12
         assert sq.year == 2024 and sq.month == 9 and sq.day == 13
 
         # 第2限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 2, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 2, "monthly")
         assert cm == "2024-10"
         assert ltd.year == 2024 and ltd.month == 10 and ltd.day == 10
         assert sq.year == 2024 and sq.month == 10 and sq.day == 11
 
-    def test_check_option_maturity_monthly_negative(self, maturity_info):
-        """月次限月で負のnth_contract_monthでcheck_option_maturityをテスト"""
+    def test_get_contract_dates_monthly_negative(self, maturity_info):
+        """月次限月で負のnth_contract_monthでget_contract_datesをテスト"""
         dt = datetime.datetime(
             2024, 12, 20, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
 
         # 直近の前限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, -1, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, -1, "monthly")
         assert cm == "2024-12"
         assert ltd.year == 2024 and ltd.month == 12 and ltd.day == 12
         assert sq.year == 2024 and sq.month == 12 and sq.day == 13
 
         # 2つ前の限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, -2, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, -2, "monthly")
         assert cm == "2024-11"
         assert ltd.year == 2024 and ltd.month == 11 and ltd.day == 7
         assert sq.year == 2024 and sq.month == 11 and sq.day == 8
 
-    def test_check_option_maturity_weekly_positive(self, maturity_info):
-        """週次限月で正のnth_contract_monthでcheck_option_maturityをテスト"""
+    def test_get_contract_dates_weekly_positive(self, maturity_info):
+        """週次限月で正のnth_contract_monthでget_contract_datesをテスト"""
         dt = datetime.datetime(
             2024, 10, 1, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
 
         # 第1週次限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 1, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 1, "weekly")
         assert cm == "2024-10-W1"
         assert ltd.year == 2024 and ltd.month == 10 and ltd.day == 3
         assert sq.year == 2024 and sq.month == 10 and sq.day == 4
 
         # 第2週次限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 2, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 2, "weekly")
         assert cm == "2024-10-W2"
         assert ltd.year == 2024 and ltd.month == 10 and ltd.day == 10
         assert sq.year == 2024 and sq.month == 10 and sq.day == 11
 
-    def test_check_option_maturity_weekly_negative(self, maturity_info):
-        """週次限月で負のnth_contract_monthでcheck_option_maturityをテスト"""
+    def test_get_contract_dates_weekly_negative(self, maturity_info):
+        """週次限月で負のnth_contract_monthでget_contract_datesをテスト"""
         dt = datetime.datetime(
             2025, 1, 20, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
 
         # 直近の前週次限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, -1, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, -1, "weekly")
         assert cm == "2025-01-W3"
         assert ltd.year == 2025 and ltd.month == 1 and ltd.day == 16
         assert sq.year == 2025 and sq.month == 1 and sq.day == 17
 
         # 2つ前の週次限月をテスト
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, -2, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, -2, "weekly")
         assert cm == "2025-01-W2"
         assert ltd.year == 2025 and ltd.month == 1 and ltd.day == 9
         assert sq.year == 2025 and sq.month == 1 and sq.day == 10
 
-    def test_check_option_maturity_timezone_handling(self, maturity_info):
+    def test_get_contract_dates_timezone_handling(self, maturity_info):
         """関数がタイムゾーン情報を正しく処理することをテスト"""
         # タイムゾーン情報のない日時でテスト
         dt_naive = datetime.datetime(2024, 10, 1)
-        ltd, sq, cm = maturity_info.check_option_maturity(dt_naive, 1, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt_naive, 1, "monthly")
         assert ltd.tzinfo is not None
         assert sq.tzinfo is not None
 
         # タイムゾーン情報のある日時でテスト
         jst = datetime.timezone(datetime.timedelta(hours=9))
         dt_aware = datetime.datetime(2024, 10, 1, tzinfo=jst)
-        ltd, sq, cm = maturity_info.check_option_maturity(dt_aware, 1, "monthly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt_aware, 1, "monthly")
         assert ltd.tzinfo is not None
         assert sq.tzinfo is not None
 
-    def test_check_option_maturity_errors(self, maturity_info):
-        """check_option_maturityのエラーケースをテスト"""
+    def test_get_contract_dates_errors(self, maturity_info):
+        """get_contract_datesのエラーケースをテスト"""
         dt = datetime.datetime(
             2024, 10, 1, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
@@ -176,25 +176,25 @@ class TestMaturityInfoClass:
         with pytest.raises(
             ValueError, match="nth_contract_monthは0以外で指定してください"
         ):
-            maturity_info.check_option_maturity(dt, 0, "monthly")
+            maturity_info.get_contract_dates(dt, 0, "monthly")
 
         # 利用可能なデータを超える将来の日付でテスト
         future_dt = datetime.datetime(
             2026, 1, 1, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
         with pytest.raises(ValueError, match="以前のみ対応"):
-            maturity_info.check_option_maturity(future_dt, 1, "monthly")
+            maturity_info.get_contract_dates(future_dt, 1, "monthly")
 
         # 無効なcontract_frequencyでテスト
         with pytest.raises(
             ValueError,
             match="contract_frequencyは'monthly' / 'weekly'のみ指定してください",
         ):
-            maturity_info.check_option_maturity(dt, 1, "quarterly")
+            maturity_info.get_contract_dates(dt, 1, "quarterly")
 
         # 範囲外のnth_contract_monthでテスト
         with pytest.raises(ValueError, match="限月は存在しません"):
-            maturity_info.check_option_maturity(dt, 100, "monthly")
+            maturity_info.get_contract_dates(dt, 100, "monthly")
 
     def test_handling_of_non_weekly_contracts(self, maturity_info):
         """週次頻度を使用する場合に月次限月が正しくW2でラベル付けされることをテスト"""
@@ -203,20 +203,20 @@ class TestMaturityInfoClass:
         )
 
         # 週次限月をリクエストする場合、月次限月はW2のサフィックスが付けられるべき
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 1, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 1, "weekly")
         assert cm == "2024-09-W1"  # 新しいデータセットではW1が最初の週次限月
 
         # 月次限月を含むケース
         dt = datetime.datetime(
             2024, 9, 7, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
         )
-        ltd, sq, cm = maturity_info.check_option_maturity(dt, 1, "weekly")
+        ltd, sq, cm = maturity_info.get_contract_dates(dt, 1, "weekly")
         assert cm == "2024-09-W2"  # 月次限月にW2サフィックスが追加される
 
     def test_november_trading_time_change(self, maturity_info):
         """2024年11月5日前後の取引時間変更が正しく反映されているかテスト"""
         # 11月5日以前の限月
-        early_contract = maturity_info.check_option_maturity(
+        early_contract = maturity_info.get_contract_dates(
             datetime.datetime(
                 2024, 9, 1, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
             ),
@@ -227,7 +227,7 @@ class TestMaturityInfoClass:
         assert early_contract[0].minute == 15
 
         # 11月5日以降の限月
-        late_contract = maturity_info.check_option_maturity(
+        late_contract = maturity_info.get_contract_dates(
             datetime.datetime(
                 2024, 11, 10, tzinfo=datetime.timezone(datetime.timedelta(hours=9))
             ),

@@ -41,7 +41,7 @@ class maturity_info_class:
 
         self.sq_data = self.sq_data.sort_values("LastTradingDay")
 
-    def check_option_maturity(
+    def get_contract_dates(
         self,
         dt: datetime.datetime,
         nth_contract_month: int,

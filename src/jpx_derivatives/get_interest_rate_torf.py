@@ -1,14 +1,17 @@
-import os
-import math
-from datetime import datetime
-import time
 import asyncio
+import math
+import os
+import time
+from datetime import datetime
 
-from playwright.async_api import async_playwright, TimeoutError
-from scipy.interpolate import CubicSpline
 import duckdb
+from playwright.async_api import TimeoutError, async_playwright
+from scipy.interpolate import CubicSpline
 
-from config import logging, setup_logging, data_dir
+from jpx_derivatives.config import data_dir, logging, setup_logging
+
+logger_name = setup_logging(__file__)
+logger = logging.getLogger(logger_name)
 
 
 def interpolate_interest_rate(
@@ -36,9 +39,7 @@ def interpolate_interest_rate(
     return result
 
 
-async def get_interest_rate_torf(
-    logger: logging.Logger,
-) -> tuple[datetime, dict[int, float]]:
+async def get_interest_rate_torf() -> tuple[datetime, dict[int, float]]:
     """
     TORFから金利取得 1M/3M/6M
     Returns datetime: 金利の適用日付
@@ -71,13 +72,11 @@ async def get_interest_rate_torf(
             # 値が読み込まれるまで待機
             await page.wait_for_selector(f"xpath={date_xpath}", timeout=20000)
         except TimeoutError:
-            msg = f"InterestRate TORF Timeout ERROR date"
-            logger.error(msg)
+            logger.error("InterestRate TORF Timeout ERROR date")
             return datetime.now(), {}
         date_element = await page.query_selector(date_xpath)
         if not date_element:
-            msg = f"InterestRate TORF ERROR date"
-            logger.error(msg)
+            logger.error("InterestRate TORF ERROR date")
             return datetime.now(), {}
         date_str = await date_element.inner_text()
         target_date = datetime.strptime(date_str, "%Y/%m/%d")
@@ -88,15 +87,13 @@ async def get_interest_rate_torf(
                 # 値が読み込まれるまで待機
                 await page.wait_for_selector(f"xpath={xpath}", timeout=20000)
             except TimeoutError:
-                msg = f"InterestRate TORF Timeout ERROR {data}"
-                logger.error(msg)
+                logger.error(f"InterestRate TORF Timeout ERROR {data}")
                 return target_date, {}
 
             specific_element = await page.query_selector(xpath)
 
             if not specific_element:
-                msg = f"InterestRate TORF ERROR {tenor}"
-                logger.error(msg)
+                logger.error(f"InterestRate TORF ERROR {tenor}")
                 return target_date, {}
             # 金利の値取得
             value = await specific_element.inner_text()
@@ -163,18 +160,15 @@ def output_interest_rate_parquet(
 
 
 if __name__ == "__main__":
-    logger_name = setup_logging(__file__)
-    logger = logging.getLogger(logger_name)
-
     # 3回リトライする
     for _ in range(3):
-        target_date, data_interest_rate = asyncio.run(get_interest_rate_torf(logger))
+        target_date, data_interest_rate = asyncio.run(get_interest_rate_torf())
         # 失敗した場合時間をおいてリトライ
         if len(data_interest_rate) == 0:
             time.sleep(10)
             continue
         break
     else:
-        raise ValueError(f"TORF金利スクレイピングエラー")
+        raise ValueError("TORF金利スクレイピングエラー")
 
     output_interest_rate_parquet(data_interest_rate, target_date)
