@@ -1,3 +1,4 @@
+import os
 from datetime import date, datetime
 
 import pandas as pd
@@ -87,6 +88,10 @@ def is_holiday(target_date: date | datetime | str | None = None) -> bool:
     if target_date.weekday() >= 5:  # 5=土曜日, 6=日曜日
         return True
 
+    # 祝日データがなければ読み込み
+    if not os.path.exists(data_dir / "holidays.parquet"):
+        save_holidays_to_parquet()
+
     holidays_df = pd.read_parquet(data_dir / "holidays.parquet")
 
     # 対象の年がなければ祝日データを更新
@@ -96,7 +101,7 @@ def is_holiday(target_date: date | datetime | str | None = None) -> bool:
         holidays_df = pd.read_parquet(data_dir / "holidays.parquet")
 
     # 休日一覧と照合
-    return target_date in holidays_df['Date'].dt.date.values
+    return target_date in holidays_df["Date"].dt.date.values
 
 
 def save_holidays_to_parquet():
