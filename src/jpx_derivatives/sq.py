@@ -241,15 +241,15 @@ def get_sq_data() -> tuple[int] | int:
         )
         return 1
 
-    sq_date_n225 = tree.xpath('//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[2]')[
-        0
-    ].text_content()
+    sq_date_n225 = tree.xpath(
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[2]'
+    )[0].text_content()
     sq_date_n225_mini = tree.xpath(
         '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[3]/td[2]'
     )[0].text_content()
-    sq_n225_raw = tree.xpath('//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[3]')[
-        0
-    ].text_content()
+    sq_n225_raw = tree.xpath(
+        '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[2]/td[3]'
+    )[0].text_content()
     sq_n225_mini_raw = tree.xpath(
         '//*[@id="readArea"]//div[@class="component-normal-table"]//table/tbody/tr[3]/td[3]'
     )[0].text_content()
@@ -269,34 +269,18 @@ def update_data() -> int:
     logger.info(f"日経225 SQ日: {sq_date_n225}, SQ値 {sq_n225}")
     logger.info(f"日経225ミニオプション SQ日: {sq_date_n225_mini}, SQ値 {sq_n225_mini}")
 
-    n225_latest = duckdb.sql(
-        f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225}'"
-    ).fetchone()[0]
-    n225_mini_latest = duckdb.sql(
-        f"SELECT FinalSettlementPrices FROM '{file_path}' WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
-    ).fetchone()[0]
-    is_n225_value_exist = n225_latest is not None
-    is_n225_mini_value_exist = n225_mini_latest is not None
-
-    # データが更新されていなければ終了
-    if all((is_n225_value_exist, is_n225_mini_value_exist)):
-        logger.info("データは最新です, 処理を終了します")
-        return 0
-
     con = duckdb.connect(database=":memory:")
     con.execute(f"CREATE TABLE special_quotation AS SELECT * FROM '{file_path}'")
-    if not is_n225_value_exist:
-        logger.info(f"日経225のSQ値を更新します, SQ日: {sq_date_n225} SQ値: {sq_n225}")
-        con.execute(
-            f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225} WHERE SpecialQuotationDay = '{sq_date_n225}'"
-        )
-    if not is_n225_mini_value_exist:
-        logger.info(
-            f"日経225ミニオプションのSQ値を更新します, SQ日: {sq_date_n225_mini} SQ値: {sq_n225_mini}"
-        )
-        con.execute(
-            f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225_mini} WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
-        )
+    logger.info(f"日経225のSQ値を更新します, SQ日: {sq_date_n225} SQ値: {sq_n225}")
+    con.execute(
+        f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225} WHERE SpecialQuotationDay = '{sq_date_n225}'"
+    )
+    logger.info(
+        f"日経225ミニオプションのSQ値を更新します, SQ日: {sq_date_n225_mini} SQ値: {sq_n225_mini}"
+    )
+    con.execute(
+        f"UPDATE special_quotation SET FinalSettlementPrices = {sq_n225_mini} WHERE SpecialQuotationDay = '{sq_date_n225_mini}'"
+    )
     logger.info(f"{file_path} に書き込みます")
     con.sql(f"COPY (SELECT * FROM special_quotation) TO '{file_path}'")
     return 0
