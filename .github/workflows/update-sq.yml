@@ -3,6 +3,7 @@ name: update-sq
 on:
   schedule:
     - cron: '50 6 * * 5'  # 毎週金曜日の15時50分(JST)
+  workflow_dispatch:
 jobs:
   update-sq:
     name: python
